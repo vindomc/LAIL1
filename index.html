@@ -1,0 +1,448 @@
+<html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Unbounded', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes bounce {
+            to { opacity: 1; transform: translateY(-5px); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        .thinking {
+            text-align: center;
+            padding: 10px;
+            font-style: italic;
+            color: #666;
+        }
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .loading-indicator span {
+            width: 8px;
+            height: 8px;
+            background-color: #666;
+            border-radius: 50%;
+            margin: 0 3px;
+            opacity: 0.4;
+            animation: bounce 1s infinite alternate;
+        }
+        .loading-circle {
+            border: 4px solid #666;
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: rotate 1s linear infinite;
+        }
+        .chat-bubble {
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            max-width: 75%;
+            font-size: 16px;
+            position: relative;
+            border: 1px solid #333;
+            animation: slideIn 0.4s ease-out;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: #fff;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .ai-message {
+            background-color: #333;
+            color: #fff;
+            align-self: flex-start;
+        }
+        .header {
+            background-color: #333;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #444;
+        }
+        .header button {
+            background-color: #555;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .header button:hover {
+            background-color: #666;
+            transform: scale(1.05);
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background-color: #222;
+            border: 2px solid #444;
+            border-radius: 12px;
+            position: relative;
+        }
+        .welcome-message {
+            text-align: center;
+            font-size: 48px;
+            color: #fff;
+            margin-top: 50px;
+            animation: fadeIn 2s ease-in-out;
+        }
+        .suggestions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 20px;
+            animation: fadeIn 2s ease-in-out;
+        }
+        .suggestion {
+            background-color: #444;
+            color: #fff;
+            padding: 16px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid #555;
+            transition: background-color 0.3s, transform 0.3s;
+            font-size: 18px;
+        }
+        .suggestion:hover {
+            background-color: #555;
+            transform: scale(1.05);
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background-color: #333;
+            border-top: 2px solid #444;
+        }
+        .input-container input {
+            flex-grow: 1;
+            padding: 12px;
+            background-color: #444;
+            border: 1px solid #555;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            margin-right: 8px;
+            animation: typing 2s steps(30, end) infinite;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .input-container button {
+            background-color: #555;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .input-container button:hover {
+            background-color: #666;
+            transform: scale(1.05);
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .action-button {
+            background-color: #555;
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .action-button:hover {
+            background-color: #666;
+            transform: scale(1.05);
+        }
+    </style>
+    <script>
+        let isGenerating = false;
+        let currentAIMessage = '';
+        let suggestionsList = [
+            ['Tell me a joke', 'Give me a fun fact', 'How do I cook pasta?'],
+            ['What is AI?', 'Tell me a quote', 'How to learn programming?'],
+            ['What is the capital of France?', 'Tell me a riddle', 'How to stay healthy?']
+        ];
+
+        async function sendMessage(message = null) {
+            if (isGenerating) return;
+
+            const inputField = document.getElementById('chatInput');
+            const userMessage = message || inputField.value;
+            if (!userMessage) return;
+
+            // Remove welcome message and suggestions if present
+            const welcomeMessage = document.getElementById('welcomeMessage');
+            const suggestions = document.getElementById('suggestions');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            if (suggestions) {
+                suggestions.remove();
+            }
+
+            // Display user message
+            addChatBubble(userMessage, 'user');
+
+            // Clear input field
+            inputField.value = '';
+
+            // Show thinking indicator
+            showThinkingIndicator();
+
+            // Disable input field and buttons
+            inputField.disabled = true;
+            const sendButton = document.getElementById('sendButton');
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<i class="fas fa-stop"></i>';
+            document.getElementById('ttsButton').disabled = true;
+
+            isGenerating = true;
+
+            // Call Hugging Face API
+            const aiMessage = await generateText([{ role: "user", content: userMessage }]);
+
+            // Hide thinking indicator
+            hideThinkingIndicator();
+
+            // Display AI message
+            addChatBubble(aiMessage, 'ai');
+
+            // Enable input field and buttons
+            inputField.disabled = false;
+            sendButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            document.getElementById('ttsButton').disabled = false;
+
+            isGenerating = false;
+        }
+
+        function addChatBubble(message, sender) {
+            const chatContainer = document.getElementById('chatContainer');
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+            bubble.innerText = message;
+            chatContainer.appendChild(bubble);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            if (sender === 'user') {
+                const actionButtons = document.createElement('div');
+                actionButtons.className = 'action-buttons';
+                actionButtons.innerHTML = `
+                    <button class="action-button" onclick="editMessage(this, '${message}')"><i class="fas fa-edit"></i></button>
+                `;
+                chatContainer.appendChild(actionButtons);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                if (event.target.classList.contains('edit-input')) {
+                    saveEditedMessage(event.target);
+                } else {
+                    sendMessage();
+                }
+            }
+        }
+
+        function textToSpeech() {
+            const chatContainer = document.getElementById('chatContainer');
+            const aiMessages = chatContainer.querySelectorAll('.ai-message');
+            aiMessages.forEach(message => {
+                const utterance = new SpeechSynthesisUtterance(message.innerText);
+                speechSynthesis.speak(utterance);
+            });
+        }
+
+        function clearChat() {
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            showWelcomeMessage();
+        }
+
+        function showThinkingIndicator() {
+            const chatContainer = document.getElementById('chatContainer');
+            const thinkingIndicator = document.createElement('div');
+            thinkingIndicator.className = 'thinking';
+            thinkingIndicator.id = 'thinkingIndicator';
+            thinkingIndicator.innerHTML = 'Generating Response...<div class="loading-circle"></div>';
+            chatContainer.appendChild(thinkingIndicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideThinkingIndicator() {
+            const thinkingIndicator = document.getElementById('thinkingIndicator');
+            if (thinkingIndicator) {
+                thinkingIndicator.remove();
+            }
+        }
+
+        function showWelcomeMessage() {
+            const chatContainer = document.getElementById('chatContainer');
+            const welcomeMessage = document.createElement('div');
+            welcomeMessage.className = 'welcome-message';
+            welcomeMessage.id = 'welcomeMessage';
+            welcomeMessage.innerHTML = "<p>Hi, I'm LiconAI</p><p>Ask me anything</p>";
+            chatContainer.appendChild(welcomeMessage);
+
+            const randomSuggestions = suggestionsList[Math.floor(Math.random() * suggestionsList.length)];
+            const suggestions = document.createElement('div');
+            suggestions.className = 'suggestions';
+            suggestions.id = 'suggestions';
+            suggestions.innerHTML = randomSuggestions.map(suggestion => `<div class="suggestion" onclick="sendMessage('${suggestion}')">${suggestion}</div>`).join('');
+            chatContainer.appendChild(suggestions);
+        }
+
+        function stopGeneration() {
+            const chatContainer = document.getElementById('chatContainer');
+            const thinkingIndicator = document.getElementById('thinkingIndicator');
+            if (thinkingIndicator) {
+                thinkingIndicator.innerHTML = 'Response Generation Stopped';
+            }
+
+            const randomSuggestions = suggestionsList[Math.floor(Math.random() * suggestionsList.length)];
+            const suggestions = document.createElement('div');
+            suggestions.className = 'suggestions';
+            suggestions.id = 'suggestions';
+            suggestions.innerHTML = randomSuggestions.map(suggestion => `<div class="suggestion" onclick="sendMessage('${suggestion}')">${suggestion}</div>`).join('');
+            chatContainer.appendChild(suggestions);
+
+            isGenerating = false;
+        }
+
+        async function editMessage(button, message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const userBubble = button.closest('.action-buttons').previousElementSibling;
+
+            // Create an input field for editing
+            const editInput = document.createElement('input');
+            editInput.type = 'text';
+            editInput.value = message;
+            editInput.className = 'edit-input flex-grow bg-gray-700 text-white px-4 py-2 rounded';
+            editInput.style.width = ((editInput.value.length + 1) * 8) + 'px';
+            editInput.addEventListener('input', () => adjustInputWidth(editInput));
+            editInput.addEventListener('keypress', handleKeyPress);
+            userBubble.replaceWith(editInput);
+
+            // Create a save button
+            const saveButton = document.createElement('button');
+            saveButton.className = 'action-button';
+            saveButton.innerHTML = '<i class="fas fa-save"></i>';
+            saveButton.onclick = async () => saveEditedMessage(editInput, userBubble);
+            button.replaceWith(saveButton);
+        }
+
+        async function saveEditedMessage(editInput, userBubble) {
+            const newMessage = editInput.value;
+            userBubble.innerText = newMessage;
+            editInput.replaceWith(userBubble);
+
+            const saveButton = userBubble.nextElementSibling.querySelector('.action-button');
+            saveButton.innerHTML = '<i class="fas fa-edit"></i>';
+            saveButton.onclick = () => editMessage(saveButton, newMessage);
+
+            // Show thinking indicator
+            showThinkingIndicator();
+
+            isGenerating = true;
+
+            // Call Hugging Face API
+            const aiMessage = await generateText([{ role: "user", content: newMessage }]);
+
+            // Hide thinking indicator
+            hideThinkingIndicator();
+
+            // Update AI message in the same bubble
+            const aiBubble = userBubble.nextElementSibling.nextElementSibling;
+            aiBubble.innerText = aiMessage;
+
+            isGenerating = false;
+        }
+
+        function adjustInputWidth(input) {
+            input.style.width = ((input.value.length + 1) * 8) + 'px';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputField = document.getElementById('chatInput');
+            inputField.addEventListener('keypress', handleKeyPress);
+            inputField.addEventListener('input', () => adjustInputWidth(inputField));
+            adjustInputWidth(inputField);
+            showWelcomeMessage();
+        });
+
+        async function generateText(messages) {
+            const { HfInference } = await import('https://esm.sh/@huggingface/inference');
+            const hf = new HfInference('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');
+
+            try {
+                const response = await hf.chatCompletion({
+                    model: "mistralai/Mixtral-8x7B-Instruct-v0.1",
+                    messages: messages,
+                    max_tokens: 500,
+                    temperature: 0.7,
+                });
+                return response.choices[0].message.content;
+            } catch (error) {
+                console.error("Error fetching from Hugging Face:", error);
+                return "Sorry, I couldn't generate a response at the moment.";
+            }
+        }
+    </script>
+</head>
+<body class="h-screen flex flex-col">
+    <div class="header">
+        <span class="text-white">LiconAI-1 Preview</span>
+        <button onclick="clearChat()" class="bg-gray-700 text-white px-4 py-2 rounded">Clear Chat</button>
+    </div>
+    <div class="flex-grow flex flex-col p-4">
+        <div class="chat-container" id="chatContainer" style="overflow-y: auto; max-height: calc(100vh - 200px);"></div>
+    </div>
+    <div class="input-container">
+        <input id="chatInput" type="text" placeholder="Ask me anything." class="flex-grow bg-gray-700 text-white px-4 py-2 rounded">
+        <button id="sendButton" onclick="sendMessage()" class="bg-gray-700 text-white px-4 py-2 rounded">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+        <button id="ttsButton" onclick="textToSpeech()" class="bg-gray-700 text-white px-4 py-2 rounded">
+            <i class="fas fa-volume-up"></i>
+        </button>
+    </div>
+</body>
+</html>
