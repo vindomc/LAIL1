@@ -1,5 +1,6 @@
 <html>
 <head>
+    <title>LiconAI-1 Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
@@ -28,11 +29,22 @@
             from { width: 0; }
             to { width: 100%; }
         }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        @keyframes loadingCircle {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(180deg); }
+            100% { transform: rotate(360deg); }
+        }
         .thinking {
             text-align: center;
             padding: 10px;
             font-style: italic;
             color: #666;
+            animation: pulse 1.5s infinite;
         }
         .loading-indicator {
             display: flex;
@@ -55,7 +67,7 @@
             border-radius: 50%;
             width: 24px;
             height: 24px;
-            animation: rotate 1s linear infinite;
+            animation: loadingCircle 1s linear infinite;
         }
         .chat-bubble {
             padding: 12px;
@@ -119,6 +131,7 @@
         }
         .suggestions {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
             gap: 16px;
             margin-top: 20px;
@@ -154,9 +167,12 @@
             color: #fff;
             font-size: 16px;
             margin-right: 8px;
-            animation: typing 2s steps(30, end) infinite;
-            white-space: nowrap;
-            overflow: hidden;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .input-container input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            outline: none;
         }
         .input-container button {
             background-color: #555;
@@ -198,7 +214,14 @@
         let suggestionsList = [
             ['Tell me a joke', 'Give me a fun fact', 'How do I cook pasta?'],
             ['What is AI?', 'Tell me a quote', 'How to learn programming?'],
-            ['What is the capital of France?', 'Tell me a riddle', 'How to stay healthy?']
+            ['What is the capital of France?', 'Tell me a riddle', 'How to stay healthy?'],
+            ['What is the meaning of life?', 'Tell me a story', 'How to meditate?'],
+            ['What is the weather today?', 'Give me a recipe', 'How to improve memory?'],
+            ['What is blockchain?', 'Tell me a poem', 'How to be productive?'],
+            ['What is quantum computing?', 'Give me a workout plan', 'How to manage time?'],
+            ['What is the best programming language?', 'Tell me a myth', 'How to start a business?'],
+            ['What is the history of the internet?', 'Give me a travel tip', 'How to learn a new language?'],
+            ['What is the future of AI?', 'Tell me a joke', 'How to stay motivated?']
         ];
 
         async function sendMessage(message = null) {
@@ -233,6 +256,7 @@
             sendButton.disabled = true;
             sendButton.innerHTML = '<i class="fas fa-stop"></i>';
             document.getElementById('ttsButton').disabled = true;
+            document.getElementById('micButton').disabled = true;
 
             isGenerating = true;
 
@@ -250,6 +274,7 @@
             sendButton.disabled = false;
             sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
             document.getElementById('ttsButton').disabled = false;
+            document.getElementById('micButton').disabled = false;
 
             isGenerating = false;
         }
@@ -319,7 +344,7 @@
             const welcomeMessage = document.createElement('div');
             welcomeMessage.className = 'welcome-message';
             welcomeMessage.id = 'welcomeMessage';
-            welcomeMessage.innerHTML = "<p>Hi, I'm TezAI</p><p>Ask me anything</p>";
+            welcomeMessage.innerHTML = "<p>Hi, I'm TejAI</p><p>Ask me anything</p>";
             chatContainer.appendChild(welcomeMessage);
 
             const randomSuggestions = suggestionsList[Math.floor(Math.random() * suggestionsList.length)];
@@ -328,23 +353,6 @@
             suggestions.id = 'suggestions';
             suggestions.innerHTML = randomSuggestions.map(suggestion => `<div class="suggestion" onclick="sendMessage('${suggestion}')">${suggestion}</div>`).join('');
             chatContainer.appendChild(suggestions);
-        }
-
-        function stopGeneration() {
-            const chatContainer = document.getElementById('chatContainer');
-            const thinkingIndicator = document.getElementById('thinkingIndicator');
-            if (thinkingIndicator) {
-                thinkingIndicator.innerHTML = 'Response Generation Stopped';
-            }
-
-            const randomSuggestions = suggestionsList[Math.floor(Math.random() * suggestionsList.length)];
-            const suggestions = document.createElement('div');
-            suggestions.className = 'suggestions';
-            suggestions.id = 'suggestions';
-            suggestions.innerHTML = randomSuggestions.map(suggestion => `<div class="suggestion" onclick="sendMessage('${suggestion}')">${suggestion}</div>`).join('');
-            chatContainer.appendChild(suggestions);
-
-            isGenerating = false;
         }
 
         async function editMessage(button, message) {
@@ -425,11 +433,45 @@
                 return "Sorry, I couldn't generate a response at the moment.";
             }
         }
+
+        let recognition;
+        function startListening() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('Your browser does not support speech recognition. Please use Google Chrome.');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                document.getElementById('micButton').classList.add('bg-blue-500');
+            };
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('chatInput').value = transcript;
+                sendMessage(transcript);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error', event);
+            };
+
+            recognition.onend = function() {
+                document.getElementById('micButton').classList.remove('bg-blue-500');
+            };
+
+            recognition.start();
+        }
     </script>
 </head>
 <body class="h-screen flex flex-col">
     <div class="header">
-        <span class="text-white">TezAI-1 Preview</span>
+        <span class="text-white">TejAI-1 Preview</span>
         <button onclick="clearChat()" class="bg-gray-700 text-white px-4 py-2 rounded">Clear Chat</button>
     </div>
     <div class="flex-grow flex flex-col p-4">
@@ -442,6 +484,9 @@
         </button>
         <button id="ttsButton" onclick="textToSpeech()" class="bg-gray-700 text-white px-4 py-2 rounded">
             <i class="fas fa-volume-up"></i>
+        </button>
+        <button id="micButton" onclick="startListening()" class="bg-gray-700 text-white px-4 py-2 rounded">
+            <i class="fas fa-microphone"></i>
         </button>
     </div>
 </body>
